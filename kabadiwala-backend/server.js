@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Allow base64 image payloads
 
 // Initialize Gemini with your API key
-const ai = new GoogleGenAI({ apiKey: "AQ.Ab8RN6LjcTGpNuy9qxMM4ceo1JhAhCmebWEwXheQ2MAMaHz63Q" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // 1. Existing Dealers API endpoint (Returns 10 Wagholi Dealers)
 app.get('/api/dealers', (req, res) => {
