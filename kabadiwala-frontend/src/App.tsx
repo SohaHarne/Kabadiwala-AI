@@ -136,14 +136,16 @@ export default function App() {
   }, 0);
 
   const totalEarnedAmount = pickupHistory.reduce((sum, record) => {
-    const cleanPayout = parseInt(record.payout.replace(/[^0-9]/g, '')) || 0;
+    const cleanPayout = parseInt(record.payout.replace(/[^0-9]/g, ''), 10) || 0;
     return sum + cleanPayout;
   }, 0);
 
-  // Fetch 10 Kabadiwalas from Node.js Backend on mount
+  // Dynamic API URL with safe Render fallback
+  const API_URL = 'https://kabadiwala-ai-backend.onrender.com';
+
   useEffect(() => {
     setDealerLoading(true);
-    fetch('http://localhost:5000/api/dealers')
+    fetch(`${API_URL}/api/dealers`)
       .then((res) => res.json())
       .then((data) => {
         setNearbyDealers(data);
@@ -152,7 +154,7 @@ export default function App() {
       })
       .catch((err) => {
         console.error('Backend connection error:', err);
-        setBackendStatus('Backend offline (Make sure server.js is running on port 5000)');
+        setBackendStatus('Backend offline (Make sure server is running)');
         setDealerLoading(false);
       });
   }, []);
@@ -177,7 +179,7 @@ export default function App() {
     setResult(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/classify', {
+      const res = await fetch(`${API_URL}/api/classify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64 })
@@ -672,46 +674,44 @@ export default function App() {
                     localStorage.removeItem('kabadiwala_user_email');
                     localStorage.removeItem('kabadiwala_user_name');
                     setIsLoggedIn(false);
+                    window.location.reload();
                   }}
-                  className="p-2.5 bg-rose-950/30 text-rose-400 hover:bg-rose-950/50 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                  title="Sign Out"
+                  className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all"
+                  title="Logout"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[var(--background)] border border-[var(--border)] p-3.5 rounded-2xl text-center">
-                  <Award className="w-5 h-5 text-[var(--primary)] mx-auto mb-1" />
-                  <div className="text-lg font-black text-[var(--foreground)]">{totalRecycledKg} kg</div>
-                  <div className="text-[10px] text-[var(--muted-foreground)]">Total Recycled</div>
+                <div className="bg-[var(--background)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase">Total Recycled</span>
+                  <span className="text-lg font-black text-[var(--foreground)]">{totalRecycledKg.toFixed(1)} kg</span>
                 </div>
-                <div className="bg-[var(--background)] border border-[var(--border)] p-3.5 rounded-2xl text-center">
-                  <ShieldCheck className="w-5 h-5 text-[var(--primary)] mx-auto mb-1" />
-                  <div className="text-lg font-black text-[var(--foreground)]">₹{totalEarnedAmount}</div>
-                  <div className="text-[10px] text-[var(--muted-foreground)]">Total Earned</div>
+                <div className="bg-[var(--background)] border border-[var(--border)] p-4 rounded-2xl flex flex-col gap-1">
+                  <span className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase">Total Earned</span>
+                  <span className="text-lg font-black text-emerald-500">₹{totalEarnedAmount}</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5" /> Scanned Item History ({userName})
-                </h3>
-                
-                <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
-                  {scanHistory.map((scan) => (
-                    <div key={scan.id} className="p-3 bg-[var(--background)] border border-[var(--border)] rounded-xl flex items-center justify-between text-xs">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Recent Pickup History</h3>
+                {pickupHistory.length === 0 ? (
+                  <p className="text-xs text-[var(--muted-foreground)] italic">No pickups recorded yet.</p>
+                ) : (
+                  pickupHistory.map((rec) => (
+                    <div key={rec.id} className="p-3.5 bg-[var(--background)] border border-[var(--border)] rounded-xl flex items-center justify-between text-xs">
                       <div>
-                        <span className="font-bold text-[var(--foreground)] block">{scan.item}</span>
-                        <span className="text-[10px] text-[var(--muted-foreground)]">{scan.date}</span>
+                        <p className="font-bold text-[var(--foreground)]">{rec.item}</p>
+                        <p className="text-[10px] text-[var(--muted-foreground)]">Dealer: {rec.dealer} • {rec.date}</p>
                       </div>
                       <div className="text-right">
-                        <span className="font-black text-[var(--primary)] block">{scan.value}</span>
-                        <span className="text-[9px] bg-[var(--muted)] px-2 py-0.5 rounded text-[var(--muted-foreground)] font-semibold">{scan.category}</span>
+                        <span className="font-black text-emerald-500 block">{rec.payout}</span>
+                        <span className="text-[9px] text-[var(--muted-foreground)] font-semibold">{rec.status}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -719,40 +719,49 @@ export default function App() {
 
       </div>
 
-      {/* Floating Bottom Nav Bar */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 max-w-sm w-[90%] bg-[var(--card)]/90 backdrop-blur-md border border-[var(--border)] rounded-2xl p-2 shadow-2xl flex items-center justify-around z-50">
-        <button 
-          onClick={() => setActiveTab('scanner')} 
-          className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'scanner' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+      {/* BOTTOM NAVIGATION BAR */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 max-w-sm w-[90%] bg-[var(--card)] border border-[var(--border)] backdrop-blur-md rounded-2xl p-2 shadow-2xl flex items-center justify-around z-50">
+        <button
+          onClick={() => setActiveTab('scanner')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+            activeTab === 'scanner' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          }`}
         >
           <Camera className="w-4 h-4" />
-          <span className="text-[10px]">AI Scan</span>
+          <span>Scanner</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('estimator')} 
-          className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'estimator' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+        <button
+          onClick={() => setActiveTab('estimator')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+            activeTab === 'estimator' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          }`}
         >
           <Calculator className="w-4 h-4" />
-          <span className="text-[10px]">Estimator</span>
+          <span>Estimator</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('dealers')} 
-          className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'dealers' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+        <button
+          onClick={() => setActiveTab('dealers')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+            activeTab === 'dealers' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          }`}
         >
           <MapPin className="w-4 h-4" />
-          <span className="text-[10px]">Dealers</span>
+          <span>Dealers</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('profile')} 
-          className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'profile' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+            activeTab === 'profile' ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-sm' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+          }`}
         >
           <User className="w-4 h-4" />
-          <span className="text-[10px]">Profile</span>
+          <span>Profile</span>
         </button>
       </div>
+
     </div>
   );
 }
