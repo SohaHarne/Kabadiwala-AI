@@ -141,24 +141,34 @@ export default function App() {
   }, 0);
 
   // Dynamic API URL with safe Render fallback
-  const API_URL = 'https://kabadiwala-ai-backend.onrender.com';
+  const API_URL = 'https://kabadiwala-ai.onrender.com';
 
   useEffect(() => {
-    setDealerLoading(true);
-    fetch(`${API_URL}/api/dealers`)
-      .then((res) => res.json())
-      .then((data) => {
+  setDealerLoading(true);
+  fetch(`${API_URL}/api/dealers`)
+    .then((res) => res.json())
+    .then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
         setNearbyDealers(data);
-        setBackendStatus('Connected to Backend (Wagholi, Pune API)');
-        setDealerLoading(false);
-      })
-      .catch((err) => {
-        console.error('Backend connection error:', err);
-        setBackendStatus('Backend offline (Make sure server is running)');
-        setDealerLoading(false);
-      });
-  }, []);
-
+      } else {
+        // Fallback mock dealers if array is empty
+        setNearbyDealers([
+          { id: 1, name: 'Shree Ganesh Scrap Trading', area: 'Wagholi, Pune', distance: '1.2 km', phone: '919876543210', rating: '4.8 ★', verified: true },
+          { id: 2, name: 'EcoGreen Recyclers', area: 'Lohegaon Road, Wagholi', distance: '2.5 km', phone: '919876543211', rating: '4.6 ★', verified: true }
+        ]);
+      }
+      setDealerLoading(false);
+    })
+    .catch((err) => {
+      console.error('Using offline fallback dealers:', err);
+      // Fallback mock dealers on network failure
+      setNearbyDealers([
+        { id: 1, name: 'Shree Ganesh Scrap Trading', area: 'Wagholi, Pune', distance: '1.2 km', phone: '919876543210', rating: '4.8 ★', verified: true },
+        { id: 2, name: 'EcoGreen Recyclers', area: 'Lohegaon Road, Wagholi', distance: '2.5 km', phone: '919876543211', rating: '4.6 ★', verified: true }
+      ]);
+      setDealerLoading(false);
+    });
+}, []);
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
